@@ -1,0 +1,7 @@
+
+var a = 2;
+while (a) {
+    show a;
+    show "Hello from while";
+    a = a - 1;
+}

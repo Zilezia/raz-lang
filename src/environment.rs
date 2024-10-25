@@ -1,11 +1,12 @@
 use crate::expr::LiteralValue;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 
 pub struct Environment {
     values: HashMap<String, LiteralValue>,
-    pub enclosing: Option<Rc<Environment>>,
+    pub enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
@@ -20,11 +21,12 @@ impl Environment {
         self.values.insert(name, value);
     }
 
-    pub fn get(self: &Self, name: &str) -> Option<&LiteralValue> {
+    pub fn get(self: &Self, name: &str) -> Option<LiteralValue> {
         let value = self.values.get(name);
+        
         match (value, &self.enclosing) {
-            (Some(val), _) => Some(val),
-            (None, Some(env)) => env.get(name),
+            (Some(val), _) => Some(val.clone()),
+            (None, Some(env)) => env.borrow().get(name),
             (None, None) => None
         }
     }
@@ -36,22 +38,11 @@ impl Environment {
             (Some(_), _) => {
                 self.values.insert(name.to_string(), value);
                 true
-            }
-            (None, Some(env)) => Rc::get_mut(&mut env.clone())
-                .expect("Could not get mutable ref to env")
-                .assign(name, value),
-
+            },
+            (None, Some(env)) => 
+                (env.borrow_mut()).assign(name, value),
             (None, None) => false
         }
     }
 
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     #[test]
-//     fn try_init() {
-//         let environment = Environment::new();
-//     }
-// }

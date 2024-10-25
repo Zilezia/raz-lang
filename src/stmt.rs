@@ -6,7 +6,23 @@ pub enum Stmt {
     Expression { expression: Expr },
     Print { expression: Expr },
     Var { name: Token, initialiser: Expr },
-    Block { statements: Vec<Stmt>},
+    Block { statements: Vec<Box<Stmt>>},
+    IfStmt { 
+        condition: Expr,
+        then_branch: Box<Stmt>,
+        else_branch: Option<Box<Stmt>>,
+    },
+    WhileStmt { 
+        condition: Expr,
+        body: Box<Stmt>,
+    },
+    // ForStmt {
+    //     var_decl: Option<Box<Stmt>>,
+    //     expr_stmt: Option<Box<Stmt>>,
+    //     condition: Option<Expr>,
+    //     incrementer: Option<Expr>,
+    //     body: Box<Stmt>,
+    // },
 }
 
 impl Stmt {
@@ -22,6 +38,12 @@ impl Stmt {
                     |stmt| stmt.to_string()
                 ).collect::<String>()
             ),
+            IfStmt { condition, then_branch, else_branch} => {
+                todo!();
+            },
+            WhileStmt { condition, body } => {
+                todo!();
+            },
         }
     }
 }

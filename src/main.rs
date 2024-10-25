@@ -14,19 +14,12 @@ use std::io::Write;
 use std::process::exit;
 use std::io;
 
-// fn error_handler(msg) {
-//     println!("ERROR:\n{}", msg);
-//     exit(1);
-// }
-
 fn run_file(path: &str) -> Result<(), String> {
     let mut interpreter = Interpreter::new();    
     match fs::read_to_string(path) {
         Err(msg) => return Err(msg.to_string()),
         Ok(contents) => return run(&mut interpreter, &contents),
     }
-        // .expect("Couldn't read file.");
-    // run(contents);
 }
 
 fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
@@ -35,7 +28,7 @@ fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
 
     let mut parser = Parser::new(tokens);
     let stmts = parser.parse()?;
-    interpreter.interpret(stmts)?;
+    interpreter.interpret(stmts.iter().collect())?;
     return Ok(());
 }
 
@@ -57,7 +50,7 @@ fn run_prompt() -> Result<(), String> {
             },
             Err(_) => return Err("Couldn't read line".to_string())
         }
-        println!("ECHO: {}", buffer);
+        // println!("ECHO: {}", buffer); // debug
         match run(&mut interpreter, &buffer) {
             Ok(_) => (),
             Err(msg) => println!("{}", msg)
@@ -88,12 +81,4 @@ fn main() {
             }
         }
     }
-    // dbg!(args);
 }
-
-// use std::env;
-
-// fn main() {
-//     let args: Vec<String> = env::args().collect();
-//     dbg!(args);
-// }

@@ -24,9 +24,9 @@ fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
         ("else", Else),
         ("false", False),
         ("for", For),
-        ("fun", Fun),
+        ("func", Func),
         ("if", If),
-        ("nil", Nil),
+        ("non", Non),
         ("or", Or),
         ("print", Print),
         ("show", Show),
@@ -152,16 +152,8 @@ impl Scanner {
             '\n' => self.line+=1,
             '"' => self.string()?,
 
-            // dont want this too much nesting
-            // 'a' => if self.match_token('n') {
-            //     if self.match_token('d') { 
-            //         self.add_token(And); 
-            //     }
-            // },
-            // 'o' => if self.match_token('r') { self.add_token(Or); },
-
-            // '&' => if self.match_token('&') { self.add_token(And); },
-            // '|' => if self.match_token('|') { self.add_token(Or); },
+            '&' => if self.match_token('&') { self.add_token(And); },
+            '|' => if self.match_token('|') { self.add_token(Or); },
 
 
             c => {
@@ -304,10 +296,10 @@ pub enum TokenType {
     Identifier, StringLit, Number,
 
     // Comments
-    BlockComment, LineComment,
+    BlockComment, //LineComment,
   
     // Keywords.
-    And, Class, Else, False, Fun, For, If, Nil, Or,
+    And, Class, Else, False, Func, For, If, Non, Or,
     Print, Show, Return, Super, This, True, Var, While,
   
     Eof

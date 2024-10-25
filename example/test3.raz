@@ -1,0 +1,4 @@
+var ab = "ab";
+
+show ab*5;
+show (ab*5)/2;
