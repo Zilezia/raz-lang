@@ -97,12 +97,6 @@ impl Scanner {
     fn scan_token(self: &mut Self) -> Result<(), String> {
         let c = self.advance();
 
-        // macro_rules! add_token {
-        //     ($char:expr, $token:ident) => {
-        //         $char => self.add_token($token)
-        //     }
-        // }
-
         match c {
             '(' => self.add_token(LeftParen),
             ')' => self.add_token(RightParen),
@@ -136,22 +130,17 @@ impl Scanner {
             },
             '/' => {
                 if self.match_token('/') {
-                    loop {
-                        if self.peek() != '\n' && !self.is_at_end() {
-                            break;
-                        }
+                    while self.peek() != '\n' && !self.is_at_end() {
                         self.advance();
                     }
-                } else if self.match_token('*') {
-                    self.block_comment()?;
-                } else {
-                    self.add_token(Slash);
                 }
+                else if self.match_token('*') { self.block_comment()?; } 
+                else { self.add_token(Slash); }
             },
             ' ' | '\r' | '\t' => {},
             '\n' => self.line+=1,
             '"' => self.string()?,
-
+            
             '&' => if self.match_token('&') { self.add_token(And); },
             '|' => if self.match_token('|') { self.add_token(Or); },
 
@@ -167,54 +156,28 @@ impl Scanner {
     }
 
     fn block_comment(self: &mut Self) -> Result<(), String>{
-        while !(self.peek() == '*' && self.peek_next() == '/') && !self.is_at_end() {
+        while self.peek() != '*' && self.peek_next() != '/' && !self.is_at_end() {
             if self.peek() == '\n' { self.line+=1; }
             self.advance();
         }
+        // while self.peek() != '*' && !self.is_at_end() {
+        //     if self.peek() == '\n' { self.line+=1; }
+        //     self.advance();
+        // }
 
         if self.is_at_end() { return Err("Unterminated block comment".to_string()); }
         
         self.advance();
         self.advance();
         
-        let value = &self.source[self.start+2..self.current-2]; // .iter().map(|byt| *byt as char).collect::<String>();
+        // let value = &self.source[self.start+2..self.current-2]; // .iter().map(|byt| *byt as char).collect::<String>();
         
-        self.add_token_lit(BlockComment, Some(StringValue(value.to_string())));
+        // self.add_token_lit(BlockComment, Some(StringValue(value.to_string())));
 
         Ok(())
     }
 
-    fn identifier(self: &mut Self) -> Result<(), String> {
-        while is_alph_numeric(self.peek()) { self.advance(); }
-
-        let subString = &self.source[self.start..self.current];
-        if let Some(&t_type) = self.keywords.get(subString) {
-            self.add_token(t_type);
-        } else {
-            self.add_token(Identifier);
-        }
-        Ok(())
-    }
-
-    fn number(self: &mut Self) -> Result<(), String>{
-        while is_digit(self.peek()) { self.advance(); }
-        if self.peek() == '.' && is_digit(self.peek_next()) {
-            self.advance();
-            while is_digit(self.peek()) { self.advance(); }
-        }
-
-        let subString = &self.source[self.start..self.current];
-        let value = subString.parse::<f64>();
-        match value {
-            Ok(value) => self.add_token_lit(Number, Some(FValue(value))),
-            Err(_) => return Err(format!("Could not parse number: {}", subString))
-        }
-        
-        Ok(())
-    }
- 
     fn string(self: &mut Self) -> Result<(), String>{
-        // "random text"
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' { self.line+=1; }
             self.advance();
@@ -228,6 +191,35 @@ impl Scanner {
         
         self.add_token_lit(StringLit, Some(StringValue(value.to_string())));
 
+        Ok(())
+    }
+
+    fn number(self: &mut Self) -> Result<(), String>{
+        while is_digit(self.peek()) { self.advance(); }
+        if self.peek() == '.' && is_digit(self.peek_next()) {
+            self.advance();
+            while is_digit(self.peek()) { self.advance(); }
+        }
+
+        let sub_string = &self.source[self.start..self.current];
+        let value = sub_string.parse::<f64>();
+        match value {
+            Ok(value) => self.add_token_lit(Number, Some(FValue(value))),
+            Err(_) => return Err(format!("Could not parse number: {}", sub_string))
+        }
+        
+        Ok(())
+    }
+
+    fn identifier(self: &mut Self) -> Result<(), String> {
+        while is_alph_numeric(self.peek()) { self.advance(); }
+
+        let sub_string = &self.source[self.start..self.current];
+        if let Some(&t_type) = self.keywords.get(sub_string) {
+            self.add_token(t_type);
+        } else {
+            self.add_token(Identifier);
+        }
         Ok(())
     }
 
@@ -315,10 +307,10 @@ impl std::fmt::Display for TokenType {
 
 #[derive(Debug, Clone)]
 pub enum LiteralValue {
-    NumberValue(i64),
+    // NumberValue(i64),
     FValue(f64),
     StringValue(String),
-    IdentifierValue(String),
+    // IdentifierValue(String),
 }
 use LiteralValue::*;
 

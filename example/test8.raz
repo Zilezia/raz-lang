@@ -11,12 +11,11 @@ while (a < amount) {
     b = wBuf + b;
 }
 
-
 show "FOR fibo";
 var a = 0;
 var fBuf;
 for (var b = 1; a < amount; b = fBuf + b) {
-    print a;
+    show a;
     fBuf = a;
     a = b;
 }

@@ -5,13 +5,33 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
+    // globals: Environment,
     environment: Rc<RefCell<Environment>>,
+}
+
+fn clock_impl(_args: Vec<LiteralValue>) -> LiteralValue {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .expect("Could not get system time.")
+        .as_secs();
+    LiteralValue::NumberValue(now as f64)
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let mut globals = Environment::new();
+        globals.define( 
+            "clock".to_string(),
+            LiteralValue::Callable { 
+                name: "clock".to_string(),
+                arity: 0, 
+                func: Rc::new(clock_impl)
+            }
+        );
         Self {
-            environment: Rc::new(RefCell::new(Environment::new())),
+            // globals: globals,
+            // environment: Rc::new(RefCell::new(Environment::new())),
+            environment: Rc::new(RefCell::new(globals)),
         }
     }
 

@@ -31,11 +31,11 @@ fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
     interpreter.interpret(stmts.iter().collect())?;
     return Ok(());
 }
-
+// testing ?
 fn run_prompt() -> Result<(), String> {
     let mut interpreter = Interpreter::new();
     loop {
-        print!("> ");
+        print!(">>> ");
         let mut buffer = String::new();
         match io::stdout().flush() {
             Ok(_) => (),
@@ -65,13 +65,16 @@ fn main() {
         println!("Usage raz [script]");
         exit(64);
     } else if args.len() == 2 {
-        match run_file(&args[1]) {
-            Ok(_) => exit(0),
-            Err(msg) => {
-                println!("ERROR:\n{}", msg);
-                exit(1);
+         // basically yeah if its .raz actually work than be able to use e.g.: .txt 
+        if args[1].ends_with(".raz") {
+            match run_file(&args[1]) {
+                Ok(_) => exit(0),
+                Err(msg) => {
+                    println!("ERROR:\n{}", msg);
+                    exit(1);
+                }
             }
-        }
+        } else { println!("Wrong file type disclosed: {}\nHas to be '.raz' file.", &args[1])}
     } else {
         match run_prompt() {
             Ok(_) => exit(0),

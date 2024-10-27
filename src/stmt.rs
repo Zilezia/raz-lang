@@ -24,7 +24,6 @@ pub enum Stmt {
     //     body: Box<Stmt>,
     // },
 }
-
 impl Stmt {
     pub fn to_string(self: &mut Self) -> String {
         use Stmt::*;

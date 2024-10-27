@@ -1,0 +1,12 @@
+
+/* 
+    This 
+     is
+     a
+   block
+  comment.
+*/
+
+// and this is a simple line comment
+
+show "end";
