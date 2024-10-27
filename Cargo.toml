@@ -1,6 +1,6 @@
 [package]
 name = "raz"
-version = "0.2.0"
+version = "0.3.1"
 edition = "2021"
 authors = ["Zilezia"]
 description = "Interpreted Programming Language built in Rust"
