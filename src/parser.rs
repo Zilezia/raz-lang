@@ -1,10 +1,16 @@
-use crate::scanner::{Token, TokenType::{self,*}};
 use crate::expr::{*, Expr::*};
+use crate::literals::LiteralValue;
+use crate::scanner::{Token, TokenType::{self,*}};
 use crate::stmt::Stmt;
 
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+}
+
+#[derive(Debug)]
+enum FunctionKind {
+    Function,
 }
 
 impl Parser {
@@ -33,14 +39,44 @@ impl Parser {
 
     fn declaration(self: &mut Self) -> Result<Stmt, String> {
         if self.match_token(Var) { 
-            match self.var_declaration() {
-                Ok(stmt) => Ok(stmt),
-                Err(msg) => {
-                    self.synchronise();
-                    Err(msg)
+            self.var_declaration()
+        } else if self.match_token(Func) {
+            self.function(FunctionKind::Function)
+        } else { 
+            self.statement() 
+        }
+    }
+
+    fn function(self: &mut Self, kind: FunctionKind) -> Result<Stmt, String> {
+        let name = self.consume(Identifier, &format!("Expected {kind:?} name."))?;
+        
+        self.consume(LeftParen, &format!("Expected '(' after {kind:?} name."))?;
+        
+        let mut params = vec![];
+        if !self.check(RightParen) {
+            loop {
+                params.push(self.consume(Identifier, "Expected parameter name.")?);
+                
+                if params.len() >= 255 {
+                    let loc = self.peek().line_number;
+                    return Err(format!("Cant have more than 255 arguments [Line {loc}]")); // gotta repeat this for better debugging
                 }
+                if !self.match_token(Comma) { break; }
             }
-        } else { self.statement() }
+        }
+        
+        self.consume(RightParen, "Expected ')' after parameters.")?;
+        
+        self.consume(LeftBrace, &format!("Expected '{kind:?}' before function body."))?;
+        let body = match self.block_statement()? {
+            Stmt::Block { statements } => statements,
+            _ => panic!("Block statement parsed something that was not a block"),
+        };
+
+
+        Ok(Stmt::Function { name, params, body })
+
+
     }
 
     fn var_declaration(self: &mut Self) -> Result<Stmt, String>{
@@ -53,18 +89,31 @@ impl Parser {
         self.consume(Semicolon, "Expect ';' after variable declaration.")?;
         Ok(Stmt::Var { 
             name: token,
-            initialiser: initialiser 
+            initialiser 
         })
     }
 
     fn statement(self: &mut Self) -> Result<Stmt, String> {
         if self.match_token(If) { self.if_statement() }
-        else if self.match_token(While) { self.while_statement() }
         else if self.match_token(For) { self.for_statement() }
         else if self.match_token(LeftBrace) { self.block_statement() }
         else if self.match_tokens(&[Print, Show]) { self.print_statement() }
+        else if self.match_token(Return) { self.return_statement() }
+        else if self.match_token(While) { self.while_statement() }
         else { self.expression_statement() }
     }
+
+    fn return_statement(self: &mut Self) -> Result<Stmt, String> {
+        let keyword = self.previous();
+        let value;
+        if !self.check(Semicolon) { 
+            value = Some(self.expression()?); 
+        } else { value = None; }
+        
+        self.consume(Semicolon, "Expected ';' after return value")?;
+        Ok(Stmt::ReturnStmt { keyword, value })
+    }
+
     fn for_statement(self: &mut Self) -> Result<Stmt, String> {
         self.consume(LeftParen, "Expect '(' after 'for'.")?;
         
@@ -125,7 +174,7 @@ impl Parser {
 
         let body = self.statement()?;
 
-        Ok(Stmt::WhileStmt { condition: condition, body: Box::new(body) })
+        Ok(Stmt::WhileStmt { condition, body: Box::new(body) })
     }
 
     fn if_statement(self: &mut Self) -> Result<Stmt, String> {
@@ -141,9 +190,9 @@ impl Parser {
         } else { None };
 
         Ok(Stmt::IfStmt { 
-            condition: condition,
+            condition,
             then_branch: Box::from(then_branch),
-            else_branch: else_branch,
+            else_branch,
         })
     }
 
@@ -177,7 +226,6 @@ impl Parser {
     }
 
     fn assignment(self: &mut Self) -> Result<Expr, String> {
-        // let expr = self.equality()?;
         let expr = self.or()?;
 
         if self.match_token(Equal) {
@@ -185,10 +233,28 @@ impl Parser {
             let value = self.assignment()?;
 
             match expr {
-                Variable { name } => Ok(Assignment { name: name, value: Box::from(value) }),
+                Variable { name } => {
+                    Ok(Assignment { name, value: Box::from(value) })
+                },
                 _ => panic!("Invalid assignment target: {}", equals_op.to_string()),
             }
-        } else { Ok(expr) }
+        } 
+        // else if self.match_tokens(&[PlusPlus, MinusMinus]) {
+        //     let inc_dec = self.previous();
+
+        //     match expr {
+        //         Variable { name } => {
+        //             let op_expr = Unary { 
+        //                 val: Box::new(Variable { name: name.clone() }),
+        //                 operator: inc_dec,
+        //             };
+        //             println!("{}", op_expr.to_string());
+        //             Ok(Assignment { name, value: Box::from(op_expr) })  
+        //         },
+        //         _ => panic!("Invalid assignment target: {}", inc_dec.to_string()),
+        //     }
+        // } 
+        else { Ok(expr) }
     }
 
     fn or(self: &mut Self) -> Result<Expr, String> {
@@ -198,7 +264,7 @@ impl Parser {
             let operator = self.previous();
             let right = self.and()?;
 
-            expr = Logical { left: Box::from(expr), right: Box::from(right), operator: operator }
+            expr = Logical { left: Box::from(expr), right: Box::from(right), operator }
         };
 
         Ok(expr)
@@ -211,13 +277,11 @@ impl Parser {
             let operator = self.previous();
             let right = self.equality()?;
 
-            expr = Logical { left: Box::from(expr), right: Box::from(right), operator: operator }
+            expr = Logical { left: Box::from(expr), right: Box::from(right), operator }
         };
 
         Ok(expr)
     }
-
-    
 
     fn equality(self: &mut Self) -> Result<Expr, String>  {
         let mut expr = self.comparison()?;
@@ -227,7 +291,7 @@ impl Parser {
             expr = Binary { 
                 left: Box::from(expr),
                 right: Box::from(rhs),
-                operator: operator,
+                operator,
             };
             // matches_eq =  self.match_tokens(&[BangEqual, EqualEqual])
         }
@@ -242,7 +306,7 @@ impl Parser {
             let rhs = self.term()?;
             expr = Binary { 
                 left: Box::from(expr),
-                operator: operator,
+                operator,
                 right: Box::from(rhs),
             };
         }
@@ -257,37 +321,66 @@ impl Parser {
             let rhs = self.factor()?;
             expr = Binary { 
                 left: Box::from(expr),
-                operator: operator,
                 right: Box::from(rhs),
+                operator,
             };
         }
         Ok(expr)
     }
 
     fn factor(self: &mut Self) -> Result<Expr, String> {
-        let mut expr = self.unary()?;
+        let mut expr = self.expo()?;
         
         while self.match_tokens(&[Slash, Star]) {
             let operator = self.previous();
-            let rhs = self.unary()?;
+            let rhs = self.expo()?;
             expr = Binary { 
                 left: Box::from(expr),
-                operator: operator,
                 right: Box::from(rhs),
+                operator,
             };
         }
         Ok(expr)
     }
 
+    fn expo(self: &mut Self) -> Result<Expr, String> {
+        let mut expr = self.unary()?;
+        
+        while self.match_tokens(&[Power, Root/* cube/nth root */, Modulo]) {
+            let operator = self.previous();
+            let rhs = self.unary()?;
+            expr = Binary { 
+                left: Box::from(expr),
+                right: Box::from(rhs),
+                operator,
+            };
+        }
+        Ok(expr)
+    }
+
+
     fn unary(self: &mut Self) -> Result<Expr, String> {
-        if self.match_tokens(&[Bang, Minus]) {
+        if self.match_tokens(&[Bang, Minus, PlusPlus, MinusMinus, Root/* square root*/]) {
             let operator = self.previous();
             let rhs = self.unary()?;
             Ok(Unary { 
-                operator: operator,
-                right: Box::from(rhs),
+                val: Box::from(rhs),
+                operator,
             })
-        } else { self.call() }
+        } 
+        else { 
+            // self.call() 
+            let mut expr = self.call()?;
+            if self.match_tokens(&[PlusPlus, MinusMinus]) {
+                let operator = self.previous();
+                expr = Unary {
+                    val: Box::new(expr),
+                    operator,
+                };
+            }
+
+            Ok(expr)
+        }
     }
 
     fn call(self: &mut Self) -> Result<Expr, String> {
@@ -312,14 +405,13 @@ impl Parser {
                     let loc = self.peek().line_number;
                     return Err(format!("Cant have more than 255 arguments [Line {loc}]"));
                 }
-
                 if !self.match_token(Comma) { break; }
             }
         }
 
         let paren = self.consume(RightParen, "Expected ')' after arguments.")?;
 
-        Ok(Expr::Call { callee: Box::from(callee), paren: paren, arguments: arguments })
+        Ok(Expr::Call { callee: Box::from(callee), paren, arguments })
     }
 
     fn primary(self: &mut Self) -> Result<Expr, String> {
@@ -376,7 +468,10 @@ impl Parser {
 
     fn match_tokens(self: &mut Self, t_types: &[TokenType]) -> bool {
         for &t_type in t_types {
-            if self.match_token(t_type) { return true; }
+            if self.match_token(t_type) { 
+                println!("{}", t_type);
+                return true; 
+            }
         }
 
         false 
@@ -414,74 +509,3 @@ impl Parser {
     }
 
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::scanner::{self, LiteralValue::*, Scanner};
-
-//     #[test]
-//     fn test_addition() {
-//         let one = Token {
-//             token_type: Number,
-//             lexeme: "1".to_string(),
-//             literal: Some(NumberValue(1)),
-//             line_number: 0
-//         };
-
-//         let plus = Token {
-//             token_type: Plus,
-//             lexeme: "+".to_string(),
-//             literal: None,
-//             line_number: 0
-//         };
-
-//         let two = Token {
-//             token_type: Number,
-//             lexeme: "2".to_string(),
-//             literal: Some(NumberValue(2)),
-//             line_number: 0
-//         };
-
-//         let semi_colon = Token {
-//             token_type: Semicolon,
-//             lexeme: ";".to_string(),
-//             literal: None,
-//             line_number: 0
-//         };
-
-//         let tokens = vec![one, plus, two, semi_colon];
-//         let mut parser = Parser::new(tokens);
-
-//         let parsed_expr = parser.parse().unwrap();
-//         let string_expr = parsed_expr.to_string();
-
-//         // print!("{}", string_expr);
-//         assert_eq!(string_expr, "(1 2 +)");
-//     }
-
-//     #[test]
-//     fn test_comparison() {
-//         let source = "1 + 2 == 5 + 7";
-//         let mut scanner = Scanner::new(source);
-//         let tokens = scanner.scan_tokens().unwrap();
-//         let mut parser = Parser::new(tokens);
-//         let parsed_expr = parser.parse().unwrap();
-//         let string_expr = parsed_expr.to_string();
-//         // print!("{}", string_expr);
-//         assert_eq!(string_expr, "((1 2 +) (5 7 +) ==)");
-//     }
-
-//     #[test]
-//     fn test_eq_with_paren() {
-//         let source = "1 == (2 + 2)";
-//         let mut scanner = Scanner::new(source);
-//         let tokens = scanner.scan_tokens().unwrap();
-//         let mut parser = Parser::new(tokens);
-//         let parsed_expr = parser.parse().unwrap();
-//         let string_expr = parsed_expr.to_string();
-
-//         // print!("{}", string_expr);
-//         assert_eq!(string_expr, "(1 ((2 2 +)) ==)");
-//     }
-// }

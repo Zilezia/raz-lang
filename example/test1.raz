@@ -1,5 +1,0 @@
-var b = 10;
-var word = "seven";
-
-print word;
-show word+word+b+word;

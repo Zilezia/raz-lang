@@ -1,9 +1,0 @@
-show "Starting WHILE loop";
-var it = 0;
-while (it < 10) {
-  print it;
-  it = it + 1;
-}
-
-show "Starting FOR loop";
-for (var i = 0; i < 10; i = i + 1) print i;

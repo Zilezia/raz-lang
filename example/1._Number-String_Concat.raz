@@ -1,0 +1,12 @@
+var b = 10;
+var word = "seven";
+
+print word; 
+// output = "seven"
+
+// if both a string and number will be added
+// the output will return a string
+show word+b+word;
+// output = "seven10seven"
+
+// (print's and show's work the same exact way)

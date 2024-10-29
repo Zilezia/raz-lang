@@ -1,8 +1,7 @@
-use crate::expr::LiteralValue;
+use crate::literals::LiteralValue;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-
 
 pub struct Environment {
     values: HashMap<String, LiteralValue>,
@@ -19,6 +18,13 @@ impl Environment {
 
     pub fn define(self: &mut Self, name: String, value: LiteralValue) {
         self.values.insert(name, value);
+    }
+
+    pub fn define_top_level(&mut self, name: String, value: LiteralValue) {
+        match &self.enclosing {
+            None => self.define(name, value),
+            Some(env) => env.borrow_mut().define_top_level(name, value),
+        }
     }
 
     pub fn get(self: &Self, name: &str) -> Option<LiteralValue> {

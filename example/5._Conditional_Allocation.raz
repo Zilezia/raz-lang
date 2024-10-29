@@ -1,0 +1,7 @@
+
+var a;
+
+if (2==4) a = true;
+else a = false;
+
+show a;

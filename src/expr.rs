@@ -1,138 +1,11 @@
-use crate::scanner;
-use crate::scanner::{Token, TokenType};
 use crate::environment::Environment;
+use crate::literals::LiteralValue::{self, *};
+use crate::scanner::{Token, TokenType};
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Clone)]
-pub enum LiteralValue {
-    NumberValue(f64),
-    StringValue(String),
-    True,
-    False,
-    Non,
-    Callable { 
-        name: String,
-        arity: usize,
-        func: Rc<dyn Fn(Vec<LiteralValue>) -> LiteralValue>,
-    },
-}
-use LiteralValue::*;
-
-impl std::fmt::Debug for LiteralValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
-    }
-}
-
-impl PartialEq for LiteralValue {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (NumberValue(x), NumberValue(y)) => x == y,
-            (Callable { name, arity, func: _},
-            Callable { name: name2, arity: arity2, func: _}
-            ) => name == name2 && arity == arity2,
-            (StringValue(s1), StringValue(s2)) => s1 == s2,
-            (True, True) => true,
-            (False, False) => true,
-            (Non, Non) => true,
-            _ => false,
-        }
-    }
-}
-
-fn unwrap_as_f64(literal: Option<scanner::LiteralValue>) -> f64 {
-    match literal {
-        // Some(scanner::LiteralValue::NumberValue(x)) => x as f64,
-        Some(scanner::LiteralValue::FValue(x)) => x as f64,
-        _ => panic!("Could not unwrap as f64")
-    }
-}
-
-fn unwrap_as_string(literal: Option<scanner::LiteralValue>) -> String {
-    match literal {
-        // Some(scanner::LiteralValue::IdentifierValue(s)) => s.clone(),
-        Some(scanner::LiteralValue::StringValue(s)) => s.clone(),
-        _ => panic!("Could not unwrap as string")
-    }
-}
-
-impl LiteralValue {
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::NumberValue(x) => x.to_string(),
-            Self::StringValue(x) => format!("\"{x}\""),
-            Self::True => "true".to_string(),
-            Self::False => "false".to_string(),
-            Self::Non => "Non".to_string(),
-            //Self::Callable { name, arity, func: _ } => format!("{name}|{arity}"),
-            _ => panic!("Cannot convert LiteralValue into string"),
-        }
-    }
-
-    pub fn to_type(&self) -> &str {
-        match self {
-            Self::NumberValue(_) => "Number",
-            Self::StringValue(_) => "String",
-            Self::True => "Boolean",
-            Self::False => "Boolean",
-            Self::Non => "Non",
-            // Self::Callable => "Callable",
-            _ => panic!("Cannot check unknown LiteralValue"),
-        }
-    }
-
-    pub fn from_token(token: Token) -> Self {
-        match token.token_type {
-            TokenType::Number => Self::NumberValue(unwrap_as_f64(token.literal)),
-            TokenType::StringLit => Self::StringValue(unwrap_as_string(token.literal)),
-            TokenType::False => Self::False,
-            TokenType::True => Self::True,
-            TokenType::Non => Self::Non,
-            _ => panic!("Could not create LiteralValue from {:?}", token),
-        }
-    }
-    
-    pub fn from_bool(b: bool) -> Self {
-        if b { True } 
-        else { False }
-    }
-
-    pub fn is_falsy(self: &Self) -> LiteralValue {
-        match self {
-            NumberValue(x) => {
-                if *x == 0.0 { True }
-                else { False }
-            },
-            StringValue(s) => {
-                if s.len() == 0 { True }
-                else { False }
-            },
-            True => False,
-            False => True,
-            Non => True,
-            Callable { name: _, arity: _, func: _ } => panic!("Cannot use Callable as a falsy value."),
-        }
-    }
-
-    pub fn is_truthy(self: &Self) -> LiteralValue {
-        match self {
-            NumberValue(x) => {
-                if *x == 0.0 { False }
-                else { True }
-            },
-            StringValue(s) => {
-                if s.len() == 0 { False }
-                else { True }
-            },
-            True => True,
-            False => False,
-            Non => False,
-            Callable { name: _, arity: _, func: _ } => panic!("Cannot use Callable as a truthy value."),
-        }
-    }
-}
 
 pub enum Expr {
     Assignment { 
@@ -158,7 +31,7 @@ pub enum Expr {
     },
     Unary { 
         operator: Token,
-        right:Box<Expr>
+        val: Box<Expr>
     },
     Variable { name: Token },
 }
@@ -207,9 +80,9 @@ impl Expr {
                 operator.lexeme,
             ),
             Self::Unary { 
-                right,
+                val,
                 operator,
-            } => format!("({} {})", operator.lexeme.clone(), (*right).to_string()),
+            } => format!("({} {})", operator.lexeme.clone(), (*val).to_string()),
             Self::Variable { name } => format!("(var {})", name.lexeme),
         }
     }
@@ -247,20 +120,26 @@ impl Expr {
                             arg_vals.push(val);
                         }
 
-                        Ok(func(arg_vals))
+                        Ok(func(environment.clone(), &arg_vals))
                     },
                     unkn => Err(format!("{} is not callable.", unkn.to_type())),
                 }
             }
             Self::Literal { value } => Ok((*value).clone()),
             Self::Grouping { expression } => expression.evaluate(environment),
-            Self::Unary { operator, right } => {
-                let right = right.evaluate(environment)?;
-                match (&right, operator.token_type) {
+            Self::Unary { operator, val } => {
+                let val = val.evaluate(environment)?;
+                match (&val, operator.token_type) {
                     (NumberValue(x), TokenType::Minus) => Ok(NumberValue(-x)),
                     (NumberValue(x), TokenType::Plus) => Ok(NumberValue(*x)),
+                    (NumberValue(x), TokenType::MinusMinus) => Ok(NumberValue(x-1.0)),
+                    (NumberValue(x), TokenType::PlusPlus) => Ok(NumberValue(x+1.0)),
+                    (NumberValue(x), TokenType::Root) => {
+                        let res = f64::sqrt(*x);
+                        Ok(NumberValue(res))
+                    },
                     // have the string mirrored/reversed
-                    (_, TokenType::Minus) => return Err(format!("Minus not implemented for {:?}", right.to_type())),
+                    (_, TokenType::Minus) => return Err(format!("Minus not implemented for {:?}", val.to_type())),
                     (any, TokenType::Bang) => Ok(any.is_falsy()),
                     (_, t_type)=> Err(format!("{} is not a valid unary operator", t_type)),
                 }
@@ -300,6 +179,16 @@ impl Expr {
                     (NumberValue(x), NumberValue(y), TokenType::Minus)          => Ok(NumberValue(x-y)),
                     (NumberValue(x), NumberValue(y), TokenType::Star)           => Ok(NumberValue(x*y)),
                     (NumberValue(x), NumberValue(y), TokenType::Slash)          => Ok(NumberValue(x/y)),
+                    (NumberValue(x), NumberValue(y), TokenType::Power) => {
+                        let res = f64::powf(*x, *y);
+                        Ok(NumberValue(res))
+                    },
+                    (NumberValue(x), NumberValue(y), TokenType::Root) => {
+                        let res = f64::powf(*y, 1.0/(*x));
+                        Ok(NumberValue(res))
+                    },
+                    (NumberValue(x), NumberValue(y), TokenType::Modulo)          => Ok(NumberValue(x%y)),
+                    
                     (NumberValue(x), NumberValue(y), TokenType::Greater)        => Ok(LiteralValue::from_bool(x>y)),
                     (NumberValue(x), NumberValue(y), TokenType::GreaterEqual)   => Ok(LiteralValue::from_bool(x>=y)),
                     (NumberValue(x), NumberValue(y), TokenType::Less)           => Ok(LiteralValue::from_bool(x<y)),
@@ -374,132 +263,13 @@ impl Expr {
                     
                     (x,y,t_type) => Err(format!(
                         "{} is not implemented for operands {:?} and {:?}", t_type,x.to_string(),y.to_string()))
-                    // _ => Err("Never accomplished operation!!!!"),
                 }
             },
             _ => todo!(),
         }
     }
 
-    pub fn print(&self) {
-        println!("{}", self.to_string());
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    // use crate::Interpreter;
-    // use crate::Parser;
-    // use crate::Scanner;
-
-
-    // #[test]
-    // fn divide_string_one_way() {
-    //     /*var a = "hello";
-    //      show a/a.len(); (non existent function yet)
-    //      h*/
-    //     let statement = "show \"longer_string\"/2;"; // "h" = floor(5/3)
-    //     let mut scanner = Scanner::new(statement);
-    //     let tokens = scanner.scan_tokens().unwrap();
-    //     let mut parser = Parser::new(tokens);
-    //     let stmts = parser.parse().unwrap();
-    //     let mut interpreter = Interpreter::new();
-
-    //     interpreter.interpret(stmts).unwrap();
-    // }
-
-    // #[test]
-    // fn multiple_string() {
-    //     let statement = "show 3*\"hello\";"; // "hellohellohello"
-    //     let mut scanner = Scanner::new(statement);
-    //     let tokens = scanner.scan_tokens().unwrap();
-    //     let mut parser = Parser::new(tokens);
-    //     let stmts = parser.parse().unwrap();
-    //     let mut interpreter = Interpreter::new();
-
-    //     interpreter.interpret(stmts).unwrap();
-    // }
-
-    // this subtraction is the hardest to implement
-    // #[test]
-    // fn world_from_hello() {
-    //     let statement = "show \"hello\"-\"world\";";
-    //     let mut scanner = Scanner::new(statement);
-    //     let tokens = scanner.scan_tokens().unwrap();
-    //     let mut parser = Parser::new(tokens);
-    //     let stmts = parser.parse().unwrap();
-    //     let mut interpreter = Interpreter::new();
-
-    //     interpreter.interpret(stmts).unwrap();
-    // }
-    // #[test]
-    // fn hey_from_hello() {
-    //     let statement = "show \"hello\"-\"hey\";";
-    //     let mut scanner = Scanner::new(statement);
-    //     let tokens = scanner.scan_tokens().unwrap();
-    //     let mut parser = Parser::new(tokens);
-    //     let stmts = parser.parse().unwrap();
-    //     let mut interpreter = Interpreter::new();
-
-    //     interpreter.interpret(stmts).unwrap();
-    // }
-    // #[test]
-    // fn long_string_sub() {
-    //     let statement = "show \"some pretty interesting string here\"-\"small string\";";
-    //     let mut scanner = Scanner::new(statement);
-    //     let tokens = scanner.scan_tokens().unwrap();
-    //     let mut parser = Parser::new(tokens);
-    //     let stmts = parser.parse().unwrap();
-    //     let mut interpreter = Interpreter::new();
-
-    //     interpreter.interpret(stmts).unwrap();
-    // }
-    
-    // #[test]
-    // fn same_string_subtraction() {
-    //     let statement = "show \"hello there\"-\"hello there\";"; // should be empty
-    //     let mut scanner = Scanner::new(statement);
-    //     let tokens = scanner.scan_tokens().unwrap();
-    //     let mut parser = Parser::new(tokens);
-    //     let stmts = parser.parse().unwrap();
-    //     let mut interpreter = Interpreter::new();
-
-    //     interpreter.interpret(stmts).unwrap();
-    // }
-
-    // #[test]
-    // fn pretty_print_ast() { // uses RPN? 
-    //     let minus_token = Token { 
-    //         token_type: TokenType::Minus,
-    //         lexeme: "-".to_string(),
-    //         literal: None,
-    //         line_number: 0,
-    //     };
-    //     let one_two_three = Literal {
-    //         value: NumberValue(123.0),
-    //     };
-    //     let group = Grouping { 
-    //         expression: Box::from(Literal { 
-    //             value: NumberValue(45.67),
-    //         }),
-    //     };
-    //     let multi = Token { 
-    //         token_type: TokenType::Star,
-    //         lexeme: "*".to_string(),
-    //         literal: None,
-    //         line_number: 0
-    //     };
-    //     let ast = Binary { 
-    //         left: Box::from(Unary { 
-    //             operator: minus_token,
-    //             right: Box::from(one_two_three)
-    //         }),
-    //         operator: multi,
-    //         right: Box::from(group),
-    //     };
-
-    //     let result = ast.to_string();
-    //     // print!("{}", result);
-    //     assert_eq!(result, "((- 123) (45.67) *)")
+    // pub fn print(&self) {
+    //     println!("{}", self.to_string());
     // }
 }

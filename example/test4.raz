@@ -1,6 +1,0 @@
-
-var a;
-
-if (2==2) a = true;
-
-show a;

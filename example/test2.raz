@@ -1,4 +1,0 @@
-var hello = "hello";
-var world = "world";
-
-show hello-word;

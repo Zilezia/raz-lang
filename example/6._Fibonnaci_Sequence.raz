@@ -20,4 +20,4 @@ for (var b = 1; a < amount; b = fBuf + b) {
     a = b;
 }
 
-show wBuf+" "+fBuf;
+show wBuf+" "+fBuf; // comparison check

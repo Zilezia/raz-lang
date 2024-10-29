@@ -1,9 +1,13 @@
-mod scanner;
-mod expr;
-mod parser;
-mod interpreter;
-mod stmt;
+// TODO comment sections to say what is going on
+
 mod environment;
+mod expr;
+mod interpreter;
+mod literals;
+mod parser;
+mod scanner;
+mod stmt;
+mod functions;
 use crate::scanner::*;
 use crate::parser::*;
 use crate::interpreter::*;
@@ -31,11 +35,11 @@ fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
     interpreter.interpret(stmts.iter().collect())?;
     return Ok(());
 }
-// testing ?
+
 fn run_prompt() -> Result<(), String> {
     let mut interpreter = Interpreter::new();
     loop {
-        print!(">>> ");
+        print!("$ => ");
         let mut buffer = String::new();
         match io::stdout().flush() {
             Ok(_) => (),
@@ -53,19 +57,22 @@ fn run_prompt() -> Result<(), String> {
         // println!("ECHO: {}", buffer); // debug
         match run(&mut interpreter, &buffer) {
             Ok(_) => (),
-            Err(msg) => println!("{}", msg)
+            Err(msg) => return Err(msg.to_string()),
         }
     }
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    
+    // if given more arguments than 2: `raz file1.raz file2.raz
+    // exit out
     if args.len() > 2 {
         println!("Usage raz [script]");
         exit(64);
-    } else if args.len() == 2 {
-         // basically yeah if its .raz actually work than be able to use e.g.: .txt 
+    } 
+    // other wise if its just 2: `raz file.raz` execute mention file
+    else if args.len() == 2 {
+        // make sure it's a .raz file
         if args[1].ends_with(".raz") {
             match run_file(&args[1]) {
                 Ok(_) => exit(0),
@@ -75,7 +82,9 @@ fn main() {
                 }
             }
         } else { println!("Wrong file type disclosed: {}\nHas to be '.raz' file.", &args[1])}
-    } else {
+    } 
+    // use the interactive mode, similar to one as python
+    else {
         match run_prompt() {
             Ok(_) => exit(0),
             Err(msg) => {

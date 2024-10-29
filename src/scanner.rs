@@ -96,7 +96,6 @@ impl Scanner {
 
     fn scan_token(self: &mut Self) -> Result<(), String> {
         let c = self.advance();
-
         match c {
             '(' => self.add_token(LeftParen),
             ')' => self.add_token(RightParen),
@@ -104,10 +103,39 @@ impl Scanner {
             '}' => self.add_token(RightBrace),
             ',' => self.add_token(Comma), 
             '.' => self.add_token(Dot),
-            '-' => self.add_token(Minus),
-            '+' => self.add_token(Plus),
             ';' => self.add_token(Semicolon),
+            
+            '-' => {
+                let token = if self.match_token('-') { 
+                    MinusMinus
+                } else if self.match_token('=') {
+                    MinusEqual
+                } else { Minus };
+                self.add_token(token);
+            },
+            '+' => {
+                let token = if self.match_token('+') { 
+                    PlusPlus 
+                } else if self.match_token('=') {
+                    PlusEqual
+                }
+                else { Plus };
+                self.add_token(token);
+            },
             '*' => self.add_token(Star),
+            '/' => {
+                if self.match_token('/') {
+                    while self.peek() != '\n' && !self.is_at_end() {
+                        self.advance();
+                    }
+                }
+                else if self.match_token('*') { self.block_comment()?; } 
+                else if self.match_token('^') { self.add_token(Root); } 
+                else { self.add_token(Slash); }
+            },
+            '^' => self.add_token(Power),
+            '%' => self.add_token(Modulo),
+
             '!' => {
                 let token = if self.match_token('=') 
                     { BangEqual } else { Bang };
@@ -128,15 +156,7 @@ impl Scanner {
                     { GreaterEqual } else { Greater };
                 self.add_token(token);
             },
-            '/' => {
-                if self.match_token('/') {
-                    while self.peek() != '\n' && !self.is_at_end() {
-                        self.advance();
-                    }
-                }
-                else if self.match_token('*') { self.block_comment()?; } 
-                else { self.add_token(Slash); }
-            },
+
             ' ' | '\r' | '\t' => {},
             '\n' => self.line+=1,
             '"' => self.string()?,
@@ -144,14 +164,13 @@ impl Scanner {
             '&' => if self.match_token('&') { self.add_token(And); },
             '|' => if self.match_token('|') { self.add_token(Or); },
 
-
             c => {
                 if is_digit(c) { self.number()?; }
                 else if is_alpha(c) { self.identifier()?; }
                 else { return Err(format!("Unrecognized token at line {}: {}", self.line, c)); }
             },
-            // (add_token!('+', Plus)),
         }
+        // println!("{}", c);
         Ok(())
     }
 
@@ -160,20 +179,11 @@ impl Scanner {
             if self.peek() == '\n' { self.line+=1; }
             self.advance();
         }
-        // while self.peek() != '*' && !self.is_at_end() {
-        //     if self.peek() == '\n' { self.line+=1; }
-        //     self.advance();
-        // }
-
         if self.is_at_end() { return Err("Unterminated block comment".to_string()); }
         
         self.advance();
         self.advance();
         
-        // let value = &self.source[self.start+2..self.current-2]; // .iter().map(|byt| *byt as char).collect::<String>();
-        
-        // self.add_token_lit(BlockComment, Some(StringValue(value.to_string())));
-
         Ok(())
     }
 
@@ -187,8 +197,8 @@ impl Scanner {
         
         self.advance();
         
-        let value = &self.source[self.start+1..self.current-1]; // .iter().map(|byt| *byt as char).collect::<String>();
-        
+        let value = &self.source[self.start+1..self.current-1];
+
         self.add_token_lit(StringLit, Some(StringValue(value.to_string())));
 
         Ok(())
@@ -261,9 +271,9 @@ impl Scanner {
         let text = self.source[self.start..self.current].to_string();
 
         self.tokens.push(Token {
-            token_type: token_type,
+            token_type,
             lexeme: text,
-            literal: literal,
+            literal,
             line_number: self.line,
         });
     }
@@ -272,24 +282,27 @@ impl Scanner {
 
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
-    LeftParen, RightParen, LeftBrace, RightBrace,
-    Comma, Dot, Minus, Plus, Semicolon, Slash, Star,
+    LeftParen, RightParen, LeftBrace, RightBrace, 
+    Semicolon, Comma, Dot, 
+    // SAMDEB ->
+    Minus, Plus, Star, Slash, Power, Root,
+    Modulo,
+    MinusMinus, PlusPlus,
   
     // One or two character tokens.
-    Bang, BangEqual,
+    PlusEqual, MinusEqual,
     Equal, EqualEqual,
     Greater, GreaterEqual,
     Less, LessEqual,
+    Bang, BangEqual,
   
     // Literals.
     Identifier, StringLit, Number,
 
-    // Comments
-    BlockComment, //LineComment,
-  
     // Keywords.
     And, Class, Else, False, Func, For, If, Non, Or,
     Print, Show, Return, Super, This, True, Var, While,
@@ -322,6 +335,7 @@ pub struct Token {
     pub line_number: usize, 
 }
 
+#[allow(dead_code)]
 impl Token {
     pub fn new(
         token_type: TokenType, 
@@ -341,161 +355,3 @@ impl Token {
         format!("{} {} {:?}", self.token_type, self.lexeme, self.literal)
     }
 }
-
-
-// #[cfg(test)]
-// mod tests {
-//     use std::process::ChildStdout;
-
-//     use super::*;
-
-//     #[test]
-//     fn handle_two_char_tokens() {
-//         let source = "!= ! = ==";
-//         let mut scanner = Scanner::new(source);
-//         scanner.scan_tokens().unwrap();
-
-//         assert_eq!(scanner.tokens.len(), 5);
-//         assert_eq!(scanner.tokens[0].token_type, BangEqual);
-//         assert_eq!(scanner.tokens[1].token_type, Bang);
-//         assert_eq!(scanner.tokens[2].token_type, Equal);
-//         assert_eq!(scanner.tokens[3].token_type, EqualEqual);
-//         assert_eq!(scanner.tokens.last().unwrap().token_type, Eof);
-//     }
-
-//     #[test]
-//     fn handle_string_lit() {
-//         let source = "\"Abc\"";
-//         let mut scanner = Scanner::new(source);
-//         scanner.scan_tokens().unwrap();
-//         assert_eq!(scanner.tokens.len(), 2);
-//         assert_eq!(scanner.tokens[0].token_type, StringLit);
-//         match scanner.tokens[0].literal.as_ref().unwrap() {
-//             StringValue(val) => assert_eq!(val, "Abc"),
-//             _ => panic!("Incorrect literal type."),
-//         }
-//     }
-
-//     #[test]
-//     fn handle_string_lit_unterminated() {
-//         let source = "\"Abc";
-//         let mut scanner = Scanner::new(source);
-//         let result = scanner.scan_tokens();
-//         match result {
-//             Err(_) => (),
-//             _ => panic!("Should have failed!"),
-//         }
-//     }
-
-//     #[test]
-//     fn handle_string_lit_multiline() {
-//         let source = "\"Abc\ndef\"";
-//         let mut scanner = Scanner::new(source);
-//         scanner.scan_tokens().unwrap();
-//         assert_eq!(scanner.tokens.len(), 2);
-//         assert_eq!(scanner.tokens[0].token_type, StringLit);
-//         match scanner.tokens[0].literal.as_ref().unwrap() {
-//             StringValue(val) => assert_eq!(val, "Abc\ndef"),
-//             _ => panic!("Incorrect literal type."),
-//         }
-//     }
-
-//     #[test]
-//     fn handle_number_literals() {
-//         let source = "123.123\n231.0\n5";
-//         let mut scanner = Scanner::new(source);
-//         scanner.scan_tokens().unwrap();
-//         // for token in scanner.tokens {
-//         //     println!("{:?}", token.token_type);
-//         // }
-//         assert_eq!(scanner.tokens.len(), 4);
-//         for i in 0..3 {
-//             assert_eq!(scanner.tokens[i].token_type, Number)
-//         }
-//         match scanner.tokens[0].literal {
-//             Some(FValue(val)) => assert_eq!(val, 123.123),
-//             _ => panic!("Incorrect literal type"),
-//         }
-//         match scanner.tokens[1].literal {
-//             Some(FValue(val)) => assert_eq!(val, 231.0),
-//             _ => panic!("Incorrect literal type"),
-//         }
-//         match scanner.tokens[2].literal {
-//             Some(FValue(val)) => assert_eq!(val, 5.0),
-//             _ => panic!("Incorrect literal type"),
-//         }
-//     }
-
-//     #[test]
-//     fn get_identifier() {
-//         let source = "var_name = 12;";
-//         let mut scanner = Scanner::new(source);
-//         scanner.scan_tokens().unwrap();
-
-//         assert_eq!(scanner.tokens.len(), 5);
-//         assert_eq!(scanner.tokens[0].token_type, Identifier);
-//         assert_eq!(scanner.tokens[1].token_type, Equal);
-//         assert_eq!(scanner.tokens[2].token_type, Number);
-//         assert_eq!(scanner.tokens[3].token_type, Semicolon);
-//         assert_eq!(scanner.tokens.last().unwrap().token_type, Eof);
-//     }
-
-//     #[test]
-//     fn get_keywords() {
-//         let source = "and or print;";
-//         let mut scanner = Scanner::new(source);
-//         scanner.scan_tokens().unwrap();
-
-//         assert_eq!(scanner.tokens.len(), 5);
-//         assert_eq!(scanner.tokens[0].token_type, And);
-//         assert_eq!(scanner.tokens[1].token_type, Or);
-//         assert_eq!(scanner.tokens[2].token_type, Print);
-//         assert_eq!(scanner.tokens[3].token_type, Semicolon);
-//         assert_eq!(scanner.tokens.last().unwrap().token_type, Eof);
-//     }
-//     #[test]
-//     fn get_keywords_adv() {
-//         let source = "var newVar = 12;\nwhile true {\nprint newVar;\n}";
-//         let mut scanner = Scanner::new(source);
-//         scanner.scan_tokens().unwrap();
-
-//         assert_eq!(scanner.tokens.len(), 13);
-//         assert_eq!(scanner.tokens[0].token_type, Var);
-//         assert_eq!(scanner.tokens[1].token_type, Identifier);
-//         assert_eq!(scanner.tokens[2].token_type, Equal);
-//         assert_eq!(scanner.tokens[3].token_type, Number);
-//         assert_eq!(scanner.tokens[4].token_type, Semicolon);
-//         assert_eq!(scanner.tokens[5].token_type, While);
-//         assert_eq!(scanner.tokens[6].token_type, True);
-//         assert_eq!(scanner.tokens[7].token_type, LeftBrace);
-//         assert_eq!(scanner.tokens[8].token_type, Print);
-//         assert_eq!(scanner.tokens[9].token_type, Identifier);
-//         assert_eq!(scanner.tokens[10].token_type, Semicolon);
-//         assert_eq!(scanner.tokens[11].token_type, RightBrace);
-//         assert_eq!(scanner.tokens.last().unwrap().token_type, Eof);
-//     }
-//     #[test]
-//     fn handle_block_comment_lit() {
-//         let source = "/*hello*/";
-//         let mut scanner = Scanner::new(source);
-//         scanner.scan_tokens().unwrap();
-//         assert_eq!(scanner.tokens.len(), 2);
-//         assert_eq!(scanner.tokens[0].token_type, BlockComment);
-//         match scanner.tokens[0].literal.as_ref().unwrap() {
-//             StringValue(val) => assert_eq!(val, "hello"),
-//             _ => panic!("Incorrect literal type."),
-//         }
-//     }
-
-//     #[test]
-//     fn handle_block_comment_lit_unterminated() {
-//         let source = "/* hello";
-//         let mut scanner = Scanner::new(source);
-//         let result = scanner.scan_tokens();
-//         match result {
-//             Err(_) => (),
-//             _ => panic!("Should have failed!"),
-//         }
-//     }
-
-// }

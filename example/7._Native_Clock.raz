@@ -1,0 +1,3 @@
+show clock; // shows the name and arguments it needs
+
+show clock(); // shows unix epoch time in seconds

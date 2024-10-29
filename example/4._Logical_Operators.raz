@@ -1,0 +1,6 @@
+
+show 5==6 or false;  // false
+show false or 5==5;  // true
+show 5==5 or false;  // true
+show 5==5 and false; // false
+show 5==5 and true;  // true

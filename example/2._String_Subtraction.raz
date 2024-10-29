@@ -1,0 +1,4 @@
+// subtracts characters from first/left value which are shared in both strings
+
+show "hello" - "world"; 
+// output = "hel"

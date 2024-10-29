@@ -1,37 +1,44 @@
 use crate::environment::Environment;
-use crate::expr::LiteralValue;
+use crate::literals::LiteralValue;
 use crate::stmt::Stmt;
+use crate::Token;
+
+use crate::functions::func::clock_impl;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    // globals: Environment,
+    specials: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
 }
 
-fn clock_impl(_args: Vec<LiteralValue>) -> LiteralValue {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
-        .expect("Could not get system time.")
-        .as_secs();
-    LiteralValue::NumberValue(now as f64)
-}
 
 impl Interpreter {
     pub fn new() -> Self {
-        let mut globals = Environment::new();
-        globals.define( 
+        let mut natives = Environment::new();
+        // clock func 
+        natives.define( 
             "clock".to_string(),
             LiteralValue::Callable { 
                 name: "clock".to_string(),
                 arity: 0, 
                 func: Rc::new(clock_impl)
-            }
-        );
+            });
+
         Self {
             // globals: globals,
-            // environment: Rc::new(RefCell::new(Environment::new())),
-            environment: Rc::new(RefCell::new(globals)),
+            specials: Rc::new(RefCell::new(Environment::new())),
+            environment: Rc::new(RefCell::new(natives)),
+        }
+    }
+
+    fn for_closure(parent: Rc<RefCell<Environment>>) -> Self {
+        let environment = Rc::new(RefCell::new(Environment::new()));
+        environment.borrow_mut().enclosing = Some(parent);
+        Self { 
+            specials: Rc::new(RefCell::new(Environment::new())),
+            environment
         }
     }
 
@@ -80,6 +87,63 @@ impl Interpreter {
                         self.interpret(vec![body])?;
                         flag = condition.evaluate(self.environment.clone())?;
                     }
+                },
+                Stmt::Function { 
+                    name,
+                    params,
+                    body 
+                } => {
+                    let arity = params.len();
+
+                    let params: Vec<Token> = params.iter().map(|t| (*t).clone()).collect();
+                    let body: Vec<Box<Stmt>> = body.iter().map(|b| (*b).clone()).collect();
+                    let name_clone = name.lexeme.clone();
+
+                    let func_impl = 
+                        move |parent_env, args: &Vec<LiteralValue>| 
+                    {
+                        let mut clos_int = Interpreter::for_closure(parent_env);
+
+                        for (i, arg) in args.iter().enumerate() {
+                            clos_int
+                                .environment
+                                .borrow_mut()
+                                .define(params[i].lexeme.clone(), (*arg).clone());
+                        }
+
+                        for i in 0..(body.len()) {
+                            clos_int.interpret(vec![body[i].as_ref()]).expect(&format!(
+                                "Evaluating failed inside {}",
+                                name_clone
+                            ));
+                            if let Some(value) = clos_int.specials.borrow().get("return") {
+                                return value;
+                            }
+                        }
+                        LiteralValue::Non
+                    };
+                    let callable = LiteralValue::Callable { 
+                        name: name.lexeme.clone(),
+                        arity,
+                        func: Rc::new(func_impl),
+                    };
+
+                    self.environment.borrow_mut().define(name.lexeme.clone(), callable);
+                },
+                Stmt::ReturnStmt { 
+                    keyword: _,
+                    value
+                } => {
+                    let eval_val;
+                    if let Some(value) = value {
+                        eval_val = value.evaluate(self.environment.clone())?;
+                    } else {
+                        eval_val = LiteralValue::Non;
+                    }
+                    self.specials
+                        .borrow_mut()
+                        .define_top_level("return".to_string(), eval_val);
+
                 },
             };
         }

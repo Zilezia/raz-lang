@@ -1,0 +1,6 @@
+func add(a, b) { // ofc who would even want to add just 2 and simple numbers
+    a+b;
+}
+
+show add(1,2);
+// output = 3
