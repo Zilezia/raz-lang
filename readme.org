@@ -1,0 +1,36 @@
+#+TITLE: Raz Language
+#+AUTHOR: Zilezia
+#+DATE: 17/07/2025
+
+* Prerequisites
+Rust is required if you want to compile it yourself.
+
+* How to get started
+
+1. Download Binary
+You can download the compinled binary from [releases](https://github.com/Zilezia/raz-lang/releases/)
+
+2. Compile from Source (Optional)
+Clone the repo and compile it
+
+        git clone https://github.com/Zilezia/raz-lang.git
+        cd raz-lang
+        cargo build --release
+
+The compiled binary will be located in `./target/release/raz*`
+
+* Usage
+
+Run it by giving a `.raz` file:
+
+        raz example/test.raz
+
+Interactive mode:
+
+        raz
+
+
+* TODO
+    - [ ] Errors showing during compilation not while executing
+    - [ ] structs/classes
+    - [ ] modularisation / code file/library import (like rust crating)

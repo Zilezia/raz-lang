@@ -2,8 +2,9 @@ use std::string::String;
 use std::collections::HashMap;
 
 fn is_digit(ch: char) -> bool {
-    ch as u8 >= '0' as u8 &&
-    ch as u8 <= '9' as u8
+    let uch = ch as u8;
+    uch >= '0' as u8 &&
+    uch <= '9' as u8
 }
 
 fn is_alpha(ch: char) -> bool {
@@ -45,7 +46,6 @@ pub struct Scanner {
     start: usize,
     current: usize,
     line: usize,
-
     keywords: HashMap<&'static str, TokenType>
 }
 
@@ -71,10 +71,10 @@ impl Scanner {
             }
         }
 
-        self.tokens.push(Token { 
-            token_type: Eof, 
-            lexeme: "".to_string(), 
-            literal: None, 
+        self.tokens.push(Token {
+            token_type: Eof,
+            lexeme: "".to_string(),
+            literal: None,
             line_number: self.line
         });
 
@@ -86,7 +86,7 @@ impl Scanner {
             }
             return Err(joined);
         }
-        
+
         Ok(self.tokens.clone())
     }
 
@@ -101,12 +101,12 @@ impl Scanner {
             ')' => self.add_token(RightParen),
             '{' => self.add_token(LeftBrace),
             '}' => self.add_token(RightBrace),
-            ',' => self.add_token(Comma), 
+            ',' => self.add_token(Comma),
             '.' => self.add_token(Dot),
             ';' => self.add_token(Semicolon),
-            
+
             '-' => {
-                let token = if self.match_token('-') { 
+                let token = if self.match_token('-') {
                     MinusMinus
                 } else if self.match_token('=') {
                     MinusEqual
@@ -114,12 +114,11 @@ impl Scanner {
                 self.add_token(token);
             },
             '+' => {
-                let token = if self.match_token('+') { 
-                    PlusPlus 
+                let token = if self.match_token('+') {
+                    PlusPlus
                 } else if self.match_token('=') {
                     PlusEqual
-                }
-                else { Plus };
+                } else { Plus };
                 self.add_token(token);
             },
             '*' => self.add_token(Star),
@@ -129,30 +128,30 @@ impl Scanner {
                         self.advance();
                     }
                 }
-                else if self.match_token('*') { self.block_comment()?; } 
-                else if self.match_token('^') { self.add_token(Root); } 
+                else if self.match_token('*') { self.block_comment()?; }
+                else if self.match_token('^') { self.add_token(Root); }
                 else { self.add_token(Slash); }
             },
             '^' => self.add_token(Power),
             '%' => self.add_token(Modulo),
 
             '!' => {
-                let token = if self.match_token('=') 
+                let token = if self.match_token('=')
                     { BangEqual } else { Bang };
                 self.add_token(token);
             },
             '=' => {
-                let token = if self.match_token('=') 
+                let token = if self.match_token('=')
                     { EqualEqual } else { Equal };
                 self.add_token(token);
             },
             '<' => {
-                let token = if self.match_token('=') 
+                let token = if self.match_token('=')
                     { LessEqual } else { Less };
                 self.add_token(token);
             },
             '>' => {
-                let token = if self.match_token('=') 
+                let token = if self.match_token('=')
                     { GreaterEqual } else { Greater };
                 self.add_token(token);
             },
@@ -160,7 +159,7 @@ impl Scanner {
             ' ' | '\r' | '\t' => {},
             '\n' => self.line+=1,
             '"' => self.string()?,
-            
+
             '&' => if self.match_token('&') { self.add_token(And); },
             '|' => if self.match_token('|') { self.add_token(Or); },
 
@@ -180,10 +179,10 @@ impl Scanner {
             self.advance();
         }
         if self.is_at_end() { return Err("Unterminated block comment".to_string()); }
-        
+
         self.advance();
         self.advance();
-        
+
         Ok(())
     }
 
@@ -194,9 +193,9 @@ impl Scanner {
         }
 
         if self.is_at_end() { return Err("Unterminated string".to_string()); }
-        
+
         self.advance();
-        
+
         let value = &self.source[self.start+1..self.current-1];
 
         self.add_token_lit(StringLit, Some(StringValue(value.to_string())));
@@ -217,7 +216,7 @@ impl Scanner {
             Ok(value) => self.add_token_lit(Number, Some(FValue(value))),
             Err(_) => return Err(format!("Could not parse number: {}", sub_string))
         }
-        
+
         Ok(())
     }
 
@@ -246,7 +245,7 @@ impl Scanner {
     fn match_token(self: &mut Self, expected: char) -> bool {
         if self.is_at_end() { return false; }
         if self.source.chars().nth(self.current).unwrap() != expected {
-            return false; 
+            return false;
         } else {
             self.current+=1;
             return true;
@@ -286,27 +285,23 @@ impl Scanner {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
-    LeftParen, RightParen, LeftBrace, RightBrace, 
-    Semicolon, Comma, Dot, 
+    LeftParen, RightParen, LeftBrace, RightBrace,
+    Semicolon, Comma, Dot,
     // SAMDEB ->
     Minus, Plus, Star, Slash, Power, Root,
     Modulo,
     MinusMinus, PlusPlus,
-  
-    // One or two character tokens.
+    // Eq
     PlusEqual, MinusEqual,
     Equal, EqualEqual,
     Greater, GreaterEqual,
     Less, LessEqual,
     Bang, BangEqual,
-  
     // Literals.
     Identifier, StringLit, Number,
-
     // Keywords.
     And, Class, Else, False, Func, For, If, Non, Or,
     Print, Show, Return, Super, This, True, Var, While,
-  
     Eof
 }
 

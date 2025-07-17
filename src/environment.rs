@@ -29,7 +29,7 @@ impl Environment {
 
     pub fn get(self: &Self, name: &str) -> Option<LiteralValue> {
         let value = self.values.get(name);
-        
+
         match (value, &self.enclosing) {
             (Some(val), _) => Some(val.clone()),
             (None, Some(env)) => env.borrow().get(name),

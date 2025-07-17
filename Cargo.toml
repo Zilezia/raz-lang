@@ -1,8 +1,8 @@
 [package]
 name = "raz"
-version = "0.3.2"
+version = "0.4.0"
 edition = "2021"
 authors = ["Zilezia"]
-description = "Interpreted Programming Language built in Rust"
+description = "Bum language in rust (potential next name)"
 
 [dependencies]

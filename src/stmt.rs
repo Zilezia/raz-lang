@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::scanner::Token;
 use crate::expr::Expr;
 
 #[derive(Debug, Clone)]

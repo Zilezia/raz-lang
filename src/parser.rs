@@ -469,7 +469,7 @@ impl Parser {
     fn match_tokens(self: &mut Self, t_types: &[TokenType]) -> bool {
         for &t_type in t_types {
             if self.match_token(t_type) { 
-                println!("{}", t_type);
+                // println!("{}", t_type);
                 return true; 
             }
         }
