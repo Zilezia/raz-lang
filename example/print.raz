@@ -1,0 +1,1 @@
+show "hello"; // this makes the binary weigh 9kB

@@ -1,6 +1,6 @@
 [package]
 name = "raz"
-version = "0.4.1"
+version = "0.5.0-pre"
 edition = "2021"
 authors = ["Zilezia"]
 description = "Bum language in rust (potential next name)"
@@ -8,4 +8,4 @@ description = "Bum language in rust (potential next name)"
 [features]
 default = ["interpreter"]
 interpreter = []
-compiler = [] # this is todod (dont understand compilers at all only interpreters to an extent at this time (knowledgemaxxing))
+compiler = [] # its wip now, only print statements work

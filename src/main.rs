@@ -32,10 +32,24 @@ fn main() {
         }
     }
 }
-// yeah
-#[cfg(all(not(feature = "interpreter"),feature = "compiler"))]
+
+#[cfg(all(not(feature = "interpreter"), feature = "compiler"))]
 fn main() {
-    eprintln!("The compiler version is WIP only the interpreter can be used.");
+    let args: Vec<String> = args().collect();
+    if args.len() == 1 || args.len() > 2 {
+        println!("Usage:\n\traz [file]"); // amazing help
+    } else if args.len() == 2 {
+        if args[1].ends_with(".raz")  {
+            let dir_path = "./out/";
+            let file_name = "print";
+            match run_compile(&args[1]) {
+                Ok(_) => exit(0),
+                Err(msg) => eprintln!("ERROR:\n\t{msg}")
+            }
+        } else {
+            eprintln!("Wrong file type disclosed: {}\nHas to be '.rz' or '.raz' file.", &args[1])
+        }
+    }
 }
 #[cfg(any(
     all(feature = "interpreter", feature = "compiler"),

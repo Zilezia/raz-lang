@@ -59,7 +59,7 @@ impl Interpreter {
                 },
                 Stmt::Print { expression } => {
                     let value = expression.evaluate(env)?;
-                    println!("{}", value.to_string());
+                    println!("\"{}\"", value.to_string());
                 },
                 Stmt::Var { name, initialiser } => {
                     let value = initialiser.evaluate(self.environment.clone())?;

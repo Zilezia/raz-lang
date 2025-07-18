@@ -64,7 +64,7 @@ impl LiteralValue {
     pub fn to_string(&self) -> String {
         match self {
             Self::NumberValue(x) => x.to_string(),
-            Self::StringValue(x) => format!("\"{x}\""),
+            Self::StringValue(x) => x.to_string(),
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
             Self::Non => "Non".to_string(),

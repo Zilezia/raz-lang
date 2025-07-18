@@ -4,7 +4,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::literals::LiteralValue;
-//use raz::literals::LiteralValue;
 
 pub struct Environment {
     values: HashMap<String, LiteralValue>,
