@@ -1,0 +1,10 @@
+
+var start_time = clock();
+var mil = 1000000;
+for (var i = 0; i <= mil; i=i+1) {
+    //show i;
+}
+
+var time_took = clock() - start_time;
+
+show time_took;

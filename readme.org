@@ -1,6 +1,5 @@
 #+TITLE: Raz Language
 #+AUTHOR: Zilezia
-#+DATE: 17/07/2025
 
 * Prerequisites
 Rust is required if you want to compile it yourself.
@@ -21,16 +20,20 @@ The compiled binary will be located in `./target/release/raz*`
 
 * Usage
 
-Run it by giving a `.raz` file:
+Run it by giving a `.rz` file:
 
-        raz example/test.raz
+        raz example/test.rz
 
 Interactive mode:
 
         raz
 
+* TODO (random priority, not in this order)
+	* [ ] cli help / nicer arguments
+    * [ ] structs/classes
+    * [ ] modularisation / code file/library import (like rust crating)
 
-* TODO
-    - [ ] Errors showing during compilation not while executing
-    - [ ] structs/classes
-    - [ ] modularisation / code file/library import (like rust crating)
+    * [ ] Compiled version
+    * [ ] "extern"ing like in rust for calling rust-std methods
+      - [ ] Syntax: `extern "rustc"` something like that maybe that
+        would look cool idk

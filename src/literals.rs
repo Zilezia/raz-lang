@@ -1,18 +1,25 @@
-use crate::environment::Environment;
-use crate::scanner;
-use crate::scanner::{Token, TokenType};
 
-use std::cell::RefCell;
 use std::rc::Rc;
+use std::cell::RefCell;
+
+use crate::environment::Environment;
+use crate::scanner::{self, Token, TokenType};
+use crate::digit::*;
+
+// use raz::{
+//     digit::*,
+//     environment::Environment,
+//     scanner::{self, Token, TokenType}
+// };
 
 #[derive(Clone)]
 pub enum LiteralValue {
-    NumberValue(f64),
+    NumberValue(DigitType),
     StringValue(String),
     True,
     False,
     Non,
-    Callable { 
+    Callable {
         name: String,
         arity: usize,
         func: Rc<dyn Fn(
@@ -21,6 +28,7 @@ pub enum LiteralValue {
         ) -> LiteralValue>,
     },
 }
+
 use LiteralValue::*;
 
 impl std::fmt::Debug for LiteralValue {
@@ -45,17 +53,8 @@ impl PartialEq for LiteralValue {
     }
 }
 
-fn unwrap_as_f64(literal: Option<scanner::LiteralValue>) -> f64 {
-    match literal {
-        // Some(scanner::LiteralValue::NumberValue(x)) => x as f64,
-        Some(scanner::LiteralValue::FValue(x)) => x as f64,
-        _ => panic!("Could not unwrap as f64")
-    }
-}
-
 fn unwrap_as_string(literal: Option<scanner::LiteralValue>) -> String {
     match literal {
-        // Some(scanner::LiteralValue::IdentifierValue(s)) => s.clone(),
         Some(scanner::LiteralValue::StringValue(s)) => s.clone(),
         _ => panic!("Could not unwrap as string")
     }
@@ -94,7 +93,7 @@ impl LiteralValue {
 
     pub fn from_token(token: Token) -> Self {
         match token.token_type {
-            TokenType::Number => Self::NumberValue(unwrap_as_f64(token.literal)),
+            TokenType::Number => Self::NumberValue(DigitType::from_string(token.lexeme)),
             TokenType::StringLit => Self::StringValue(unwrap_as_string(token.literal)),
             TokenType::False => Self::False,
             TokenType::True => Self::True,
@@ -102,7 +101,7 @@ impl LiteralValue {
             _ => panic!("Could not create LiteralValue from {:?}", token),
         }
     }
-    
+
     pub fn from_bool(b: bool) -> Self {
         if b { True } 
         else { False }
@@ -111,7 +110,7 @@ impl LiteralValue {
     pub fn is_falsy(self: &Self) -> LiteralValue {
         match self {
             NumberValue(x) => {
-                if *x == 0.0 { True }
+                if *x == DigitType::f32(0.0) { True }
                 else { False }
             },
             StringValue(s) => {
@@ -128,7 +127,7 @@ impl LiteralValue {
     pub fn is_truthy(self: &Self) -> LiteralValue {
         match self {
             NumberValue(x) => {
-                if *x == 0.0 { False }
+                if *x == DigitType::f32(0.0) { False }
                 else { True }
             },
             StringValue(s) => {

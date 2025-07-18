@@ -1,17 +1,25 @@
+
+use std::rc::Rc;
+use std::cell::RefCell;
+
 use crate::environment::Environment;
 use crate::literals::LiteralValue;
 use crate::stmt::Stmt;
 use crate::scanner::Token;
-
 use crate::functions::func::clock_impl;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+// use raz::{
+//     stmt::Stmt,
+//     scanner::Token,
+//     literals::LiteralValue,
+//     environment::Environment,
+//     functions::func::clock_impl
+// };
 
 pub struct Interpreter { // the environment initialiased is empty
-    // Environment with native functions
-    specials: Rc<RefCell<Environment>>,
     // Clean/empty environment
+    specials: Rc<RefCell<Environment>>,
+    // Environment with native functions (only `clock` exists)
     environment: Rc<RefCell<Environment>>,
 }
 

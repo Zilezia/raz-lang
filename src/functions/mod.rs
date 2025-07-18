@@ -1,2 +1,2 @@
-pub mod clock; // unuse
+// pub mod clock; // unuse
 pub mod func;

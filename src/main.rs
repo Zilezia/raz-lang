@@ -1,29 +1,9 @@
-// TODO comment sections to say what is going on
-
-mod environment;
-mod expr;
-mod interpreter;
-mod literals;
-mod parser;
-mod scanner;
-mod stmt;
-mod functions;
-mod runner;
-
-use crate::runner::*;
-
 use std::env::args;
 use std::process::exit;
-use std::io::{
-    self,
-    Write,
-    stdout,
-};
 
+use raz::runner::*;
 
-
-// use raz::runner::*;
-
+#[cfg(all(feature = "interpreter", not(feature = "compiler")))]
 fn main() {
     // might todo later the args here kinda got a nicer method of doing those
     let args: Vec<String> = args().collect();
@@ -32,25 +12,36 @@ fn main() {
     if args.len() > 2 {
         println!("Usage:\n\traz [file]"); // amazing help
     }
-    // other wise if its just 2: `raz file.raz` execute mention file
+    // other wise if its just 2: `raz file.rz` execute mention file
     else if args.len() == 2 {
         // make sure it's a .raz file
-        if args[1].ends_with(".raz") {
+        if args[1].ends_with(".rz") || args[1].ends_with(".raz")  { // atm the file extension has no difference
             match run_file(&args[1]) {
                 Ok(_) => exit(0),
-                Err(msg) => {
-                    eprintln!("ERROR:\n{}", msg);
-                }
+                Err(msg) => eprintln!("ERROR:\n\t{msg}")
             }
-        } else { eprintln!("Wrong file type disclosed: {}\nHas to be '.raz' file.", &args[1]) }
+        } else { eprintln!("Wrong file type disclosed: {}\nHas to be '.rz' or '.raz' file.", &args[1]) }
     }
     // use the interactive mode, similar to one as python
     else {
         match run_prompt() {
             Ok(_) => exit(0),
             Err(msg) => {
-                eprintln!("ERROR:\n{}", msg);
+                eprintln!("ERROR:\n\t{msg}");
             }
         }
     }
+}
+// yeah
+#[cfg(all(not(feature = "interpreter"),feature = "compiler"))]
+fn main() {
+    eprintln!("The compiler version is WIP only the interpreter can be used.");
+}
+#[cfg(any(
+    all(feature = "interpreter", feature = "compiler"),
+    all(not(feature = "interpreter"), not(feature = "compiler"))
+))]
+fn main() {
+    eprintln!("Either both features are enabled or both are disabled.");
+    eprintln!("Please have only one enabled (only \"interpreter\" is valid atm).");
 }

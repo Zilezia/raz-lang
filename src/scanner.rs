@@ -1,6 +1,9 @@
 use std::string::String;
 use std::collections::HashMap;
 
+use crate::digit::*;
+//use raz::digit::*;
+
 fn is_digit(ch: char) -> bool {
     let uch = ch as u8;
     uch >= '0' as u8 &&
@@ -131,7 +134,7 @@ impl Scanner {
                 else if self.match_token('*') { self.block_comment()?; }
                 else if self.match_token('^') { self.add_token(Root); }
                 else { self.add_token(Slash); }
-            },
+           },
             '^' => self.add_token(Power),
             '%' => self.add_token(Modulo),
 
@@ -211,11 +214,16 @@ impl Scanner {
         }
 
         let sub_string = &self.source[self.start..self.current];
-        let value = sub_string.parse::<f64>();
-        match value {
-            Ok(value) => self.add_token_lit(Number, Some(FValue(value))),
-            Err(_) => return Err(format!("Could not parse number: {}", sub_string))
-        }
+        let number_value = NumberValue(DigitType::from_string(sub_string.to_string()));
+        self.add_token_lit(Number, Some(number_value));
+        // let value = sub_string.parse::<f64>();
+        // let value = sub_string.parse::<u32>();
+        // match value {
+        //     Ok(value) => self.add_token_lit(Number, Some(
+        //         NumberValue(DigitType::from_string(sub_string.to_string())))
+        //     ),
+        //     Err(_) => return Err(format!("Could not parse number: {sub_string}"))
+        // }
 
         Ok(())
     }
@@ -315,10 +323,8 @@ impl std::fmt::Display for TokenType {
 
 #[derive(Debug, Clone)]
 pub enum LiteralValue {
-    // NumberValue(i64),
-    FValue(f64),
+    NumberValue(DigitType),
     StringValue(String),
-    // IdentifierValue(String),
 }
 use LiteralValue::*;
 
@@ -327,14 +333,14 @@ pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
     pub literal: Option<LiteralValue>,
-    pub line_number: usize, 
+    pub line_number: usize,
 }
 
 #[allow(dead_code)]
 impl Token {
     pub fn new(
-        token_type: TokenType, 
-        lexeme: String, 
+        token_type: TokenType,
+        lexeme: String,
         literal: Option<LiteralValue>,
         line_number: usize
     ) -> Self {

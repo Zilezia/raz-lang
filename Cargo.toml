@@ -1,8 +1,11 @@
 [package]
 name = "raz"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 authors = ["Zilezia"]
 description = "Bum language in rust (potential next name)"
 
-[dependencies]
+[features]
+default = ["interpreter"]
+interpreter = []
+compiler = [] # this is todod (dont understand compilers at all only interpreters to an extent at this time (knowledgemaxxing))

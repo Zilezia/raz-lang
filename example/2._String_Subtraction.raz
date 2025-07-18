@@ -1,4 +1,8 @@
-// subtracts characters from first/left value which are shared in both strings
 
-show "hello" - "world"; 
+// subtracts characters from first/left value which are shared in both strings
+show "hello" - "world";
 // output = "hel"
+
+// Unary operation is also acceptable on strings which just reverses the string
+show -"hello";
+// output = "elloh"

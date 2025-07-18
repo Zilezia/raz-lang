@@ -6,6 +6,12 @@ use crate::parser::*;
 use crate::scanner::*;
 use crate::interpreter::*;
 
+// use raz::{
+//     parser::*,
+//     scanner::*,
+//     interpreter::*
+// };
+
 // realised that the interpreter is being passed because of mostly `run_prompt` which needs a sort of environment initialised before of it happening
 // kinda might not have a cli version i just realised follow some tutorial they did it but now after going consiousness and having my own opinion i dont like the cli
 fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
@@ -17,6 +23,7 @@ fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
     return Ok(());
 }
 
+// this simple
 pub fn run_file(path: &str) -> Result<(), String> {
     let mut interpreter = Interpreter::new();
 
@@ -26,6 +33,8 @@ pub fn run_file(path: &str) -> Result<(), String> {
     }
 }
 
+// this might be just changed to some cli thingy maybe local raz package manager and other stuff
+// i dont like the interpreter being there like that
 pub fn run_prompt() -> Result<(), String> {
     let mut interpreter = Interpreter::new();
 

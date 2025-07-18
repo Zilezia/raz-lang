@@ -1,0 +1,8 @@
+
+show "hello" - "world";
+show "bruh" - "hello";
+
+show --"hello"; // the execution will error here, which is kinda bummy we aint doin allat lets error out during compilation
+
+show "helllo" - "hello";
+show -"hello";

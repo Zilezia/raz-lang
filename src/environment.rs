@@ -1,7 +1,10 @@
-use crate::literals::LiteralValue;
+
+use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+
+use crate::literals::LiteralValue;
+//use raz::literals::LiteralValue;
 
 pub struct Environment {
     values: HashMap<String, LiteralValue>,
